@@ -1,0 +1,6 @@
+node_modules/
+data/cache/
+data/chromium-profile/
+*.log
+config/servboard.json
+.DS_Store

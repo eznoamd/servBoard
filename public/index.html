@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>servBoard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main id="grid" class="grid" aria-live="polite">
+      <div class="boot">carregando servBoard…</div>
+    </main>
+
+    <footer id="status" class="status">
+      <span id="status-clock">--:--</span>
+      <span id="status-info">conectando…</span>
+      <button id="refresh-btn" type="button" title="Atualizar todos os slots agora">↻</button>
+    </footer>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

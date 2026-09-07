@@ -1,0 +1,6 @@
+{
+  "id": "clock",
+  "title": "Relógio",
+  "span": 1,
+  "refreshInterval": "1m"
+}

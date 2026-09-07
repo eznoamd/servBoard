@@ -1,0 +1,41 @@
+{
+  "timezone": "America/Sao_Paulo",
+
+  "server": {
+    "host": "127.0.0.1",
+    "port": 4870
+  },
+
+  "layout": {
+    "columns": 3,
+    "gap": 16
+  },
+
+  "display": {
+    "start": "07:00",
+    "stop": "23:00",
+    "days": "Mon..Sun",
+    "browser": "auto",
+    "powerManagement": true,
+    "xDisplay": ":0"
+  },
+
+  "refresh": {
+    "onCalendar": "*:0/15",
+    "runBeforeDisplay": true
+  },
+
+  "slots": [
+    { "id": "clock", "enabled": true },
+    {
+      "id": "notes",
+      "enabled": true,
+      "title": "Avisos",
+      "span": 2,
+      "settings": {
+        "text": "Bem-vindo ao servBoard.\nEdite este texto em config/servboard.json.",
+        "items": ["Slot de exemplo", "Cada slot é configurado aqui"]
+      }
+    }
+  ]
+}
