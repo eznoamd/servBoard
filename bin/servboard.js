@@ -6,6 +6,7 @@ import {
   cmdKiosk,
   cmdShow,
   cmdWaitHttp,
+  cmdWithinWindow,
   cmdInstall,
   cmdUninstall,
   cmdList,
@@ -25,6 +26,7 @@ Comandos:
   list                Lista os slots e o estado do cache
   install [--dry-run] Gera/ativa as units do systemd --user a partir da config
   uninstall [--dry-run]  Remove as units do systemd --user
+  within-window       exit 0 se agora está na janela de exibição (uso em scripts)
   wait-http           (uso interno) espera o servidor responder
 
 Config: config/servboard.json  (cai para config/servboard.example.json se ausente)
@@ -42,6 +44,7 @@ const table = {
   list: cmdList,
   install: cmdInstall,
   uninstall: cmdUninstall,
+  'within-window': cmdWithinWindow,
   'wait-http': cmdWaitHttp,
 };
 

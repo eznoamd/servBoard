@@ -6,7 +6,7 @@ import { resolveSlots, discoverSlots } from './slots.js';
 import { runRefresh, readCache } from './refresh.js';
 import { startServer } from './server.js';
 import { launchKiosk, findBrowser, setScreenPower } from './kiosk.js';
-import { toOnCalendar, validateOnCalendar } from './schedule.js';
+import { toOnCalendar, validateOnCalendar, isWithinWindow } from './schedule.js';
 import { installUnits, uninstallUnits } from './install.js';
 import { createLogger } from './logger.js';
 
@@ -112,6 +112,29 @@ export async function cmdServe() {
   logger.info('Ctrl-C para parar');
   await waitForSignal();
   return 0;
+}
+
+/**
+ * within-window: exit 0 se AGORA está dentro da janela de exibição, 1 se não.
+ * Usado pelo .xinitrc para reabrir a dashboard se o servidor reiniciar no meio
+ * da janela (os timers só disparam nos horários exatos).
+ */
+export async function cmdWithinWindow(argv) {
+  const { config } = await loadConfig();
+  const inside = isWithinWindow(new Date(), {
+    start: config.display.start,
+    stop: config.display.stop,
+    days: config.display.days,
+    timezone: config.timezone,
+  });
+  if (!argv.includes('--quiet')) {
+    console.log(
+      inside
+        ? `dentro da janela (${config.display.start}–${config.display.stop} ${config.display.days})`
+        : `fora da janela (${config.display.start}–${config.display.stop} ${config.display.days})`,
+    );
+  }
+  return inside ? 0 : 1;
 }
 
 /** wait-http: bloqueia até o servidor responder /api/health (usado pelas units). */

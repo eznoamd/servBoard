@@ -94,12 +94,26 @@ função de limpeza (ex.: `clearInterval`). Veja `slots/clock/`.
 
 ## Deploy no servidor
 
-Veja [`deploy/README.md`](deploy/README.md). Resumo:
+Servidor Debian do zero (mínimo, sem interface): passo a passo em
+[`deploy/server-setup.md`](deploy/server-setup.md). Resumo:
+
+```bash
+./deploy/provision-base.sh                       # sistema, segurança, Node, usuário kiosk
+sudo git clone <repo> /opt/servboard
+sudo /opt/servboard/deploy/provision-kiosk.sh    # X + openbox + autologin + timers
+sudo -u kiosk vim /opt/servboard/config/servboard.json
+sudo -u kiosk servboard install                  # re-gera os timers
+sudo reboot
+```
+
+Se o servidor já tem interface gráfica e usuário, só a parte do servBoard:
 
 ```bash
 ./deploy/install.sh          # npm ci + doctor + gera/ativa os timers do systemd --user
 systemctl --user start servboard-web.service   # testar agora
 ```
+
+Referência dos artefatos (units, scripts): [`deploy/README.md`](deploy/README.md).
 
 ## CLI
 
@@ -112,6 +126,7 @@ servboard show                   refresh + serve + kiosk (foreground)
 servboard list                   estado dos slots / cache
 servboard install [--dry-run]    units do systemd --user a partir da config
 servboard uninstall [--dry-run]  remove as units
+servboard within-window          exit 0 se agora está na janela de exibição
 ```
 
 `SERVBOARD_LOG_LEVEL=debug|info|warn|error` controla o log.
