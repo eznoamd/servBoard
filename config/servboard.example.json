@@ -25,6 +25,8 @@
     "runBeforeDisplay": true
   },
 
+  "slotPaths": [],
+
   "slots": [
     { "id": "clock", "enabled": true },
     {

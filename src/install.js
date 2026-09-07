@@ -37,6 +37,7 @@ export function renderUnits(config) {
   const stopCal = toOnCalendar(config.display.stop, config.display.days);
   const pm = config.display.powerManagement;
   const xDisplay = config.display.xDisplay || ':0';
+  const slotsEnv = process.env.SERVBOARD_SLOTS_PATH;
 
   const units = {};
 
@@ -45,6 +46,7 @@ export function renderUnits(config) {
   }) + ini('Service', {
     Type: 'oneshot',
     WorkingDirectory: wd,
+    ...(slotsEnv ? { Environment: `SERVBOARD_SLOTS_PATH=${slotsEnv}` } : {}),
     ExecStart: `${node} ${entry} refresh`,
   });
 
@@ -61,7 +63,10 @@ export function renderUnits(config) {
   }) + ini('Service', {
     Type: 'simple',
     WorkingDirectory: wd,
-    Environment: `SERVBOARD_LOG_LEVEL=info`,
+    Environment: [
+      'SERVBOARD_LOG_LEVEL=info',
+      ...(slotsEnv ? [`SERVBOARD_SLOTS_PATH=${slotsEnv}`] : []),
+    ],
     ...(config.refresh.runBeforeDisplay
       ? { ExecStartPre: `${node} ${entry} refresh` }
       : {}),
@@ -121,7 +126,9 @@ export function renderUnits(config) {
 
 function ini(section, kv) {
   let out = `[${section}]\n`;
-  for (const [k, v] of Object.entries(kv)) out += `${k}=${v}\n`;
+  for (const [k, v] of Object.entries(kv)) {
+    for (const item of Array.isArray(v) ? v : [v]) out += `${k}=${item}\n`;
+  }
   return out + '\n';
 }
 

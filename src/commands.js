@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import process from 'node:process';
 import { paths } from './paths.js';
 import { loadConfig, ConfigError } from './config.js';
-import { resolveSlots, discoverSlots } from './slots.js';
+import { resolveSlots, discoverSlots, resolveSlotRoots } from './slots.js';
 import { runRefresh, readCache } from './refresh.js';
 import { startServer } from './server.js';
 import { launchKiosk, findBrowser, setScreenPower } from './kiosk.js';
@@ -37,6 +37,13 @@ export async function cmdDoctor() {
     for (const line of err.message.split('\n').slice(1)) console.log(`       ${line}`);
     console.log('\nCorrija a config antes de continuar.');
     return 1;
+  }
+
+  const roots = resolveSlotRoots(config);
+  for (const r of roots) {
+    if (existsSync(r)) ok(`pasta de slots: ${r}`);
+    else if (r === paths.slotsDir) warn(`pasta de slots ausente: ${r}`);
+    else bad(`slotPaths: "${r}" não existe`);
   }
 
   try {
@@ -223,13 +230,77 @@ export async function cmdUninstall(argv) {
 
 export async function cmdList() {
   const { config } = await loadConfig();
-  const slots = await resolveSlots(config).catch(() => discoverSlots().then((d) => d.map((s) => ({ ...s, enabled: false, title: s.meta.title, span: s.meta.span }))));
-  console.log('slots:');
+  const roots = resolveSlotRoots(config);
+  const slots = await resolveSlots(config).catch(() =>
+    discoverSlots(roots).then((d) =>
+      d.map((s) => ({ ...s, enabled: false, title: s.meta.title, span: s.meta.span })),
+    ),
+  );
+  console.log('pastas de slots (prioridade decrescente):');
+  for (const r of roots) console.log(`  ${existsSync(r) ? ' ' : '!'} ${r}`);
+  console.log('\nslots:');
   for (const s of slots) {
     const cache = await readCache(s.id);
     const state = cache?.error ? `erro: ${cache.error}` : cache ? `atualizado ${cache.updatedAt}` : 'sem cache';
-    console.log(`  ${s.enabled ? '[x]' : '[ ]'} ${s.id.padEnd(14)} span=${s.span}  ${state}`);
+    const src = s.root === paths.slotsDir ? 'repo' : s.root;
+    console.log(`  ${s.enabled ? '[x]' : '[ ]'} ${s.id.padEnd(14)} span=${s.span}  ${state}   (${src})`);
   }
+  return 0;
+}
+
+/**
+ * new-slot <id> [--path <pasta>] — cria o esqueleto de um slot.
+ * Sem --path: usa a primeira entrada de config.slotPaths, senão ./slots.
+ */
+export async function cmdNewSlot(argv) {
+  const { mkdir, writeFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+
+  const id = argv.find((a) => !a.startsWith('-'));
+  if (!id || !/^[a-z0-9][a-z0-9_-]*$/.test(id)) {
+    console.error('uso: servboard new-slot <id> [--path <pasta>]');
+    console.error('  <id>: minúsculas, números, "-" e "_"');
+    return 2;
+  }
+
+  let base = collectFlag(argv, '--path')[0];
+  if (!base) {
+    const { config } = await loadConfig().catch(() => ({ config: {} }));
+    base = config.slotPaths?.[0] ?? paths.slotsDir;
+  }
+  const dir = join(base, id);
+  if (existsSync(dir)) {
+    console.error(`já existe: ${dir}`);
+    return 1;
+  }
+
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    join(dir, 'slot.json'),
+    JSON.stringify({ id, title: id, span: 1, refreshInterval: '15m' }, null, 2) + '\n',
+  );
+  await writeFile(
+    join(dir, 'index.js'),
+    `// Lógica server-side do slot "${id}".\n` +
+      `// ctx = { settings, config: { timezone }, now, logger }\n` +
+      `export async function refresh(ctx) {\n` +
+      `  return { hello: '${id}', at: ctx.now.toISOString() };\n` +
+      `}\n`,
+  );
+  await writeFile(
+    join(dir, 'view.js'),
+    `// Render client-side. Pode devolver uma função de limpeza.\n` +
+      `export function render(el, data, ctx) {\n` +
+      `  el.textContent = JSON.stringify(data);\n` +
+      `}\n`,
+  );
+
+  console.log(`slot criado em ${dir}`);
+  console.log(`\nPara aparecer na dashboard, adicione em config/servboard.json:`);
+  if (base !== paths.slotsDir) {
+    console.log(`  "slotPaths": ["${base}"],`);
+  }
+  console.log(`  "slots": [ { "id": "${id}", "enabled": true } ]`);
   return 0;
 }
 

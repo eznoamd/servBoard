@@ -63,6 +63,9 @@ Sem `config/servboard.json`, usa `config/servboard.example.json`.
     "onCalendar": "*:0/15",    // OnCalendar do systemd: a cada 15 min
     "runBeforeDisplay": true   // faz um refresh ao ligar a dashboard
   },
+  "slotPaths": [               // pastas extras de slots (além de ./slots)
+    "../servboard-slots/slots" // relativo à raiz do projeto; aceita ~ e caminho absoluto
+  ],
   "slots": [
     { "id": "clock", "enabled": true },
     { "id": "notes", "enabled": true, "title": "Avisos", "span": 2,
@@ -74,11 +77,17 @@ Sem `config/servboard.json`, usa `config/servboard.example.json`.
 - `slots[].span` — quantas colunas o card ocupa no grid.
 - `slots[].settings` — objeto livre, entregue ao `refresh(ctx)` do slot em `ctx.settings`.
 - Reordenar a lista `slots` reordena o grid.
+- `slotPaths` — ver [Slots num repo separado](#slots-num-repo-separado).
 
 ## Criar um slot
 
+```bash
+servboard new-slot energia                 # cria em ./slots (ou 1ª entrada de slotPaths)
+servboard new-slot energia --path ../servboard-slots/slots
 ```
-slots/<id>/
+
+```
+<pasta-de-slots>/<id>/
   slot.json    { "id": "<id>", "title": "...", "span": 1, "refreshInterval": "5m" }
   index.js     export async function refresh(ctx) { return { ... } }   // vira o cache
   view.js      export function render(el, data, ctx) { ... }           // opcional
@@ -91,6 +100,40 @@ Se o slot não tiver `view.js`, a UI mostra o JSON cru — útil enquanto se des
 
 `render(el, data, ctx)` recebe o container e o `data` do cache; pode devolver uma
 função de limpeza (ex.: `clearInterval`). Veja `slots/clock/`.
+
+Um slot só aparece na dashboard quando está **numa pasta de slots** E **listado em
+`config.slots` com `enabled: true`**.
+
+## Slots num repo separado
+
+A pasta `slots/` do repositório tem só os exemplos (`clock`, `notes`). Os seus
+slots ficam **fora daqui**, num repositório próprio (privado, se quiser), com a
+mesma estrutura:
+
+```
+servboard-slots/            <- seu repo
+  slots/
+    energia/  { slot.json, index.js, view.js, view.css }
+    agenda/   { ... }
+```
+
+Aponte a base para ele de uma destas formas (podem ser várias pastas):
+
+```jsonc
+// config/servboard.json
+"slotPaths": ["../servboard-slots/slots"]
+```
+```bash
+# ou por ambiente (separado por ":"), útil em scripts/systemd
+SERVBOARD_SLOTS_PATH=/caminho/servboard-slots/slots servboard serve
+```
+
+Prioridade quando o mesmo `id` existe em mais de uma pasta:
+`SERVBOARD_SLOTS_PATH` > `slotPaths` (na ordem) > `slots/` do repo. Assim um slot
+seu pode **substituir** um exemplo. `servboard list` mostra de qual pasta veio cada slot.
+
+No servidor: clone os dois repos lado a lado, `git pull` em cada um
+independente. Atualizar a base nunca conflita com os seus slots.
 
 ## Deploy (exibição agendada)
 
@@ -116,7 +159,8 @@ servboard refresh [--slot id]    roda o refresh dos slots e sai
 servboard serve                  só o servidor web (foreground)
 servboard kiosk                  só o navegador em kiosk (foreground)
 servboard show                   refresh + serve + kiosk (foreground)
-servboard list                   estado dos slots / cache
+servboard list                   pastas de slots + estado do cache
+servboard new-slot <id>          cria o esqueleto de um slot [--path <pasta>]
 servboard install [--dry-run]    units do systemd --user a partir da config
 servboard uninstall [--dry-run]  remove as units
 servboard within-window          exit 0 se agora está na janela de exibição

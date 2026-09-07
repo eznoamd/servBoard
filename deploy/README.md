@@ -36,6 +36,14 @@ Depois de mudar `config/servboard.json`, rode `servboard install` de novo.
 
 Ver o que seria gerado, sem escrever nada: `servboard install --dry-run`.
 
+### Slots num repo separado
+
+As units rodam com `WorkingDirectory` = raiz do projeto, então um `slotPaths`
+relativo como `"../servboard-slots/slots"` resolve para um repo clonado **ao lado**
+do servBoard. Para um caminho fixo, use absoluto ou `SERVBOARD_SLOTS_PATH` (o
+`servboard install` propaga o env atual para as units). `git pull` nos dois
+repos, `servboard refresh` roda os slots dos dois.
+
 ## Sessão gráfica no monitor
 
 O `servboard-kiosk.service` só consegue abrir o navegador se já existir um X

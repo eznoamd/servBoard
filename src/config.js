@@ -22,6 +22,7 @@ export const DEFAULT_CONFIG = {
     xDisplay: ':0',
   },
   refresh: { onCalendar: '*:0/15', runBeforeDisplay: true },
+  slotPaths: [],
   slots: [],
 };
 
@@ -84,6 +85,12 @@ export function validateConfig(raw, { source = '<memória>' } = {}) {
   }
   if (typeof cfg.refresh.runBeforeDisplay !== 'boolean') {
     errors.push('refresh.runBeforeDisplay deve ser true ou false.');
+  }
+
+  if (!Array.isArray(cfg.slotPaths)) {
+    errors.push('slotPaths deve ser uma lista de caminhos de pastas de slots.');
+  } else if (cfg.slotPaths.some((p) => typeof p !== 'string' || !p.trim())) {
+    errors.push('slotPaths: cada item deve ser um caminho não-vazio (ex.: "../servboard-slots/slots").');
   }
 
   if (!Array.isArray(cfg.slots)) {

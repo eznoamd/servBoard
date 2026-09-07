@@ -10,6 +10,7 @@ import {
   cmdInstall,
   cmdUninstall,
   cmdList,
+  cmdNewSlot,
   ConfigError,
 } from '../src/commands.js';
 
@@ -24,6 +25,7 @@ Comandos:
   kiosk               Sobe só o navegador em modo kiosk            [foreground]
   show                Modo teste: refresh + servidor + navegador   [foreground]
   list                Lista os slots e o estado do cache
+  new-slot <id>       Cria o esqueleto de um slot [--path <pasta>]
   install [--dry-run] Gera/ativa as units do systemd --user a partir da config
   uninstall [--dry-run]  Remove as units do systemd --user
   within-window       exit 0 se agora está na janela de exibição (uso em scripts)
@@ -42,6 +44,7 @@ const table = {
   kiosk: cmdKiosk,
   show: cmdShow,
   list: cmdList,
+  'new-slot': cmdNewSlot,
   install: cmdInstall,
   uninstall: cmdUninstall,
   'within-window': cmdWithinWindow,
