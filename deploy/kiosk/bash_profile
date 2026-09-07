@@ -1,8 +1,0 @@
-# ~/.bash_profile do usuário kiosk — instalado por deploy/provision-kiosk.sh.
-# Inicia o X automaticamente, e só, no console físico (tty1).
-
-[ -f ~/.bashrc ] && . ~/.bashrc
-
-if [ -z "${DISPLAY:-}" ] && [ "${XDG_VTNR:-}" = 1 ]; then
-  exec startx
-fi

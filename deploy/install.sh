@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instala o servBoard no servidor (Debian) usando systemd --user.
+# Instala o servBoard como serviço agendado, via systemd --user.
 # Rode como o usuário que fica logado na sessão gráfica do monitor — NÃO como root.
 set -euo pipefail
 
@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 if [[ $EUID -eq 0 ]]; then
-  echo "Não rode como root. Use o usuário da sessão gráfica (ex.: 'enzo')." >&2
+  echo "Não rode como root. Use o usuário da sessão gráfica do monitor." >&2
   exit 1
 fi
 

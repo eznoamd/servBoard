@@ -92,28 +92,21 @@ Se o slot não tiver `view.js`, a UI mostra o JSON cru — útil enquanto se des
 `render(el, data, ctx)` recebe o container e o `data` do cache; pode devolver uma
 função de limpeza (ex.: `clearInterval`). Veja `slots/clock/`.
 
-## Deploy no servidor
+## Deploy (exibição agendada)
 
-Servidor Debian do zero (mínimo, sem interface): passo a passo em
-[`deploy/server-setup.md`](deploy/server-setup.md). Resumo:
-
-```bash
-./deploy/provision-base.sh                       # sistema, segurança, Node, usuário kiosk
-sudo git clone <repo> /opt/servboard
-sudo /opt/servboard/deploy/provision-kiosk.sh    # X + openbox + autologin + timers
-sudo -u kiosk vim /opt/servboard/config/servboard.json
-sudo -u kiosk servboard install                  # re-gera os timers
-sudo reboot
-```
-
-Se o servidor já tem interface gráfica e usuário, só a parte do servBoard:
+Como o usuário que fica logado no monitor, na pasta do projeto:
 
 ```bash
 ./deploy/install.sh          # npm ci + doctor + gera/ativa os timers do systemd --user
 systemctl --user start servboard-web.service   # testar agora
 ```
 
-Referência dos artefatos (units, scripts): [`deploy/README.md`](deploy/README.md).
+`servboard install` gera as units do systemd `--user` a partir de
+`config/servboard.json` (re-rode após mudar horários). Requer uma sessão gráfica
+X11 no monitor e `loginctl enable-linger <usuário>`.
+
+Detalhes, tabela de units e um `.xinitrc` mínimo para máquina sem desktop:
+[`deploy/README.md`](deploy/README.md).
 
 ## CLI
 
