@@ -1,8 +1,24 @@
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { paths, cacheFileFor } from './paths.js';
+import { paths, cacheFileFor, stateFileFor } from './paths.js';
 import { enabledSlots, loadSlotModule } from './slots.js';
 import { createLogger } from './logger.js';
+
+/** Estado persistente por slot (data/state/<id>.json) — para acumuladores, EMA, etc. */
+async function readState(slotId) {
+  const file = stateFileFor(slotId);
+  if (!existsSync(file)) return null;
+  try {
+    return JSON.parse(await readFile(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+async function writeState(slotId, obj) {
+  await mkdir(paths.stateDir, { recursive: true });
+  await writeFile(stateFileFor(slotId), JSON.stringify(obj ?? null, null, 2) + '\n', 'utf8');
+}
 
 /** Lê o cache de um slot; devolve null se ainda não existe. */
 export async function readCache(slotId) {
@@ -45,6 +61,9 @@ export async function runRefresh(config, { only, logger = createLogger('refresh'
       config: { timezone: config.timezone },
       now: new Date(),
       logger: logger.child(slot.id),
+      // estado persistente do slot entre refreshes
+      readState: () => readState(slot.id),
+      writeState: (obj) => writeState(slot.id, obj),
     };
     try {
       const mod = await loadSlotModule(slot);

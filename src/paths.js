@@ -15,6 +15,7 @@ export const paths = {
   configExample: join(ROOT, 'config', 'servboard.example.json'),
   dataDir: join(ROOT, 'data'),
   cacheDir: join(ROOT, 'data', 'cache'),
+  stateDir: join(ROOT, 'data', 'state'),
   chromiumProfile: join(ROOT, 'data', 'chromium-profile'),
   deployDir: join(ROOT, 'deploy'),
   systemdTemplates: join(ROOT, 'deploy', 'systemd'),
@@ -22,4 +23,8 @@ export const paths = {
 
 export function cacheFileFor(slotId) {
   return join(paths.cacheDir, `${slotId}.json`);
+}
+
+export function stateFileFor(slotId) {
+  return join(paths.stateDir, `${slotId}.json`);
 }

@@ -94,8 +94,12 @@ servboard new-slot energia --path ../servboard-slots/slots
   view.css     estilos do slot                                        // opcional
 ```
 
-`ctx` no `refresh`: `{ settings, config: { timezone }, now, logger }`.
-O valor retornado é serializado em `data/cache/<id>.json` (`{ data, updatedAt, error }`).
+`ctx` no `refresh`:
+`{ settings, config: { timezone }, now, logger, readState(), writeState(obj) }`.
+`readState()`/`writeState()` guardam um JSON por slot em `data/state/<id>.json` —
+para acumuladores (kWh do dia), médias móveis, "última vez que vi X" etc.
+O valor retornado pelo `refresh` é serializado em `data/cache/<id>.json`
+(`{ data, updatedAt, error }`).
 Se o slot não tiver `view.js`, a UI mostra o JSON cru — útil enquanto se desenvolve.
 
 `render(el, data, ctx)` recebe o container e o `data` do cache; pode devolver uma
