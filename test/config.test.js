@@ -5,7 +5,9 @@ import { validateConfig, ConfigError, DEFAULT_CONFIG } from '../src/config.js';
 test('validateConfig: aplica defaults sobre objeto mínimo', () => {
   const cfg = validateConfig({});
   assert.equal(cfg.server.port, DEFAULT_CONFIG.server.port);
-  assert.equal(cfg.display.start, '07:00');
+  assert.equal(cfg.refresh.everyMinutes, 15);
+  assert.equal(cfg.refresh.onStart, true);
+  assert.equal(cfg.display.keepScreenOn, true);
   assert.deepEqual(cfg.slots, []);
 });
 
@@ -26,8 +28,10 @@ test('validateConfig: rejeita porta fora de faixa', () => {
   assert.throws(() => validateConfig({ server: { port: 99999 } }), ConfigError);
 });
 
-test('validateConfig: rejeita horário fora do formato HH:MM', () => {
-  assert.throws(() => validateConfig({ display: { start: '7h' } }), ConfigError);
+test('validateConfig: rejeita refresh.everyMinutes fora de faixa', () => {
+  assert.throws(() => validateConfig({ refresh: { everyMinutes: 0 } }), ConfigError);
+  assert.throws(() => validateConfig({ refresh: { everyMinutes: 5000 } }), ConfigError);
+  assert.throws(() => validateConfig({ refresh: { everyMinutes: 'muito' } }), ConfigError);
 });
 
 test('validateConfig: rejeita id de slot inválido e duplicado', () => {

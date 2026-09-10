@@ -14,19 +14,14 @@ export const DEFAULT_CONFIG = {
   server: { host: '127.0.0.1', port: 4870 },
   layout: { columns: 3, gap: 16 },
   display: {
-    start: '07:00',
-    stop: '23:00',
-    days: 'Mon..Sun',
     browser: 'auto',
-    powerManagement: true,
+    keepScreenOn: true,
     xDisplay: ':0',
   },
-  refresh: { onCalendar: '*:0/15', runBeforeDisplay: true },
+  refresh: { everyMinutes: 15, onStart: true },
   slotPaths: [],
   slots: [],
 };
-
-const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 function isObject(v) {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -69,22 +64,17 @@ export function validateConfig(raw, { source = '<memória>' } = {}) {
   }
 
   const d = cfg.display;
-  if (!HHMM.test(d.start)) errors.push('display.start deve estar no formato "HH:MM" (ex.: "07:00").');
-  if (!HHMM.test(d.stop)) errors.push('display.stop deve estar no formato "HH:MM" (ex.: "23:00").');
-  if (typeof d.days !== 'string' || !d.days) {
-    errors.push('display.days deve ser uma expressão de dias do systemd (ex.: "Mon..Fri", "Mon,Wed,Fri", "Mon..Sun").');
-  }
   if (typeof d.browser !== 'string') errors.push('display.browser deve ser "auto" ou o caminho/nome de um executável.');
-  if (typeof d.powerManagement !== 'boolean') errors.push('display.powerManagement deve ser true ou false.');
+  if (typeof d.keepScreenOn !== 'boolean') errors.push('display.keepScreenOn deve ser true ou false.');
   if (typeof d.xDisplay !== 'string' || !/^:\d+(\.\d+)?$/.test(d.xDisplay)) {
     errors.push('display.xDisplay deve ser um nome de display X (ex.: ":0").');
   }
 
-  if (typeof cfg.refresh.onCalendar !== 'string' || !cfg.refresh.onCalendar) {
-    errors.push('refresh.onCalendar deve ser uma expressão OnCalendar do systemd (ex.: "*:0/15").');
+  if (!Number.isFinite(cfg.refresh.everyMinutes) || cfg.refresh.everyMinutes <= 0 || cfg.refresh.everyMinutes > 1440) {
+    errors.push('refresh.everyMinutes deve ser um número entre 1 e 1440 (minutos entre atualizações dos slots).');
   }
-  if (typeof cfg.refresh.runBeforeDisplay !== 'boolean') {
-    errors.push('refresh.runBeforeDisplay deve ser true ou false.');
+  if (typeof cfg.refresh.onStart !== 'boolean') {
+    errors.push('refresh.onStart deve ser true ou false (atualizar assim que o servidor sobe).');
   }
 
   if (!Array.isArray(cfg.slotPaths)) {

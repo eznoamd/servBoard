@@ -6,7 +6,6 @@ import {
   cmdKiosk,
   cmdShow,
   cmdWaitHttp,
-  cmdWithinWindow,
   cmdInstall,
   cmdUninstall,
   cmdList,
@@ -21,14 +20,13 @@ Uso: servboard <comando> [opções]
 Comandos:
   doctor              Valida ambiente e configuração (não altera nada)
   refresh [--slot id] Roda o refresh() dos slots, grava o cache e sai
-  serve               Sobe só o servidor web (abra no navegador)   [foreground]
+  serve               Sobe o servidor web + o loop de refresh dos slots  [foreground]
   kiosk               Sobe só o navegador em modo kiosk            [foreground]
-  show                Modo teste: refresh + servidor + navegador   [foreground]
+  show                Modo teste: servidor + refresh + navegador   [foreground]
   list                Lista os slots e o estado do cache
   new-slot <id>       Cria o esqueleto de um slot [--path <pasta>]
   install [--dry-run] Gera/ativa as units do systemd --user a partir da config
   uninstall [--dry-run]  Remove as units do systemd --user
-  within-window       exit 0 se agora está na janela de exibição (uso em scripts)
   wait-http           (uso interno) espera o servidor responder
 
 Config: config/servboard.json  (cai para config/servboard.example.json se ausente)
@@ -47,7 +45,6 @@ const table = {
   'new-slot': cmdNewSlot,
   install: cmdInstall,
   uninstall: cmdUninstall,
-  'within-window': cmdWithinWindow,
   'wait-http': cmdWaitHttp,
 };
 

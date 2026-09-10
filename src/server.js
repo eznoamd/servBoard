@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { paths } from './paths.js';
 import { resolveSlots } from './slots.js';
-import { readCache, runRefresh } from './refresh.js';
+import { readCache, runRefresh, startRefreshLoop } from './refresh.js';
 import { createLogger } from './logger.js';
 
 /**
@@ -79,10 +79,18 @@ async function sendSlotAsset(config, id, key, mime, reply) {
   reply.type(mime).header('cache-control', 'no-cache').send(body);
 }
 
-/** Sobe o servidor e devolve { app, url }. */
+/**
+ * Sobe o servidor e devolve { app, url, refresher }.
+ * `refresher` é o loop que reatualiza os slots enquanto o servidor está no ar;
+ * passe `{ refreshLoop: false }` para desligá-lo (ex.: testes).
+ */
 export async function startServer(config, opts = {}) {
-  const app = await buildServer(config, opts);
+  const { logger = createLogger('server'), refreshLoop = true } = opts;
+  const app = await buildServer(config, { logger });
   const { host, port } = config.server;
   await app.listen({ host, port });
-  return { app, url: `http://${host}:${port}` };
+  const refresher = refreshLoop
+    ? startRefreshLoop(config, { logger: logger.child('refresh') })
+    : null;
+  return { app, url: `http://${host}:${port}`, refresher };
 }

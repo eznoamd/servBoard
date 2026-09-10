@@ -6,7 +6,6 @@ import { resolveSlots, discoverSlots, resolveSlotRoots } from './slots.js';
 import { runRefresh, readCache } from './refresh.js';
 import { startServer } from './server.js';
 import { launchKiosk, findBrowser, setScreenPower } from './kiosk.js';
-import { toOnCalendar, validateOnCalendar, isWithinWindow } from './schedule.js';
 import { installUnits, uninstallUnits } from './install.js';
 import { createLogger } from './logger.js';
 
@@ -66,16 +65,9 @@ export async function cmdDoctor() {
     warn('sem $DISPLAY/$WAYLAND_DISPLAY — "kiosk"/"show" só funcionam dentro da sessão do monitor');
   }
 
-  for (const [label, expr] of [
-    ['display.start', toOnCalendarSafe(config.display.start, config.display.days)],
-    ['display.stop', toOnCalendarSafe(config.display.stop, config.display.days)],
-    ['refresh.onCalendar', config.refresh.onCalendar],
-  ]) {
-    const res = await validateOnCalendar(expr);
-    res.ok
-      ? ok(`${label}: "${expr}"${res.next ? ` (próximo: ${res.next})` : ''}`)
-      : bad(`${label}: "${expr}" inválido — ${res.reason || 'ver systemd-analyze calendar'}`);
-  }
+  ok(`refresh dos slots: a cada ${config.refresh.everyMinutes} min` +
+    `${config.refresh.onStart ? ' (+ ao subir o servidor)' : ''}`);
+  ok(`tela: ${config.display.keepScreenOn ? 'mantida ligada (xset)' : 'gerida pelo sistema'}`);
 
   try {
     const { mkdir } = await import('node:fs/promises');
@@ -87,14 +79,6 @@ export async function cmdDoctor() {
 
   console.log(`\n${problems === 0 ? 'Tudo certo.' : `${problems} problema(s) encontrado(s).`}`);
   return problems === 0 ? 0 : 1;
-}
-
-function toOnCalendarSafe(hhmm, days) {
-  try {
-    return toOnCalendar(hhmm, days);
-  } catch (err) {
-    return `<inválido: ${err.message}>`;
-  }
 }
 
 /** refresh: roda os jobs dos slots e sai. */
@@ -110,38 +94,15 @@ export async function cmdRefresh(argv) {
   return failed.length ? 1 : 0;
 }
 
-/** serve: sobe só o servidor web (foreground). */
+/** serve: sobe o servidor web + o loop de refresh dos slots (foreground). */
 export async function cmdServe() {
   const { config, usingExample } = await loadConfig();
   if (usingExample) logger.warn('usando config de exemplo — crie config/servboard.json');
   const { url } = await startServer(config, { logger });
   logger.info(`dashboard em ${url}`);
-  logger.info('Ctrl-C para parar');
+  logger.info(`slots atualizam a cada ${config.refresh.everyMinutes} min · Ctrl-C para parar`);
   await waitForSignal();
   return 0;
-}
-
-/**
- * within-window: exit 0 se AGORA está dentro da janela de exibição, 1 se não.
- * Usado pelo .xinitrc para reabrir a dashboard se o servidor reiniciar no meio
- * da janela (os timers só disparam nos horários exatos).
- */
-export async function cmdWithinWindow(argv) {
-  const { config } = await loadConfig();
-  const inside = isWithinWindow(new Date(), {
-    start: config.display.start,
-    stop: config.display.stop,
-    days: config.display.days,
-    timezone: config.timezone,
-  });
-  if (!argv.includes('--quiet')) {
-    console.log(
-      inside
-        ? `dentro da janela (${config.display.start}–${config.display.stop} ${config.display.days})`
-        : `fora da janela (${config.display.start}–${config.display.stop} ${config.display.days})`,
-    );
-  }
-  return inside ? 0 : 1;
 }
 
 /** wait-http: bloqueia até o servidor responder /api/health (usado pelas units). */
@@ -166,12 +127,11 @@ export async function cmdWaitHttp() {
 export async function cmdKiosk() {
   const { config } = await loadConfig();
   const url = `http://${config.server.host}:${config.server.port}`;
-  if (config.display.powerManagement) await setScreenPower(true);
+  if (config.display.keepScreenOn) await setScreenPower(true);
   const kiosk = await launchKiosk(url, config, { logger });
   const done = new Promise((res) => kiosk.process.on('exit', res));
   await Promise.race([done, waitForSignal()]);
   kiosk.stop();
-  if (config.display.powerManagement) await setScreenPower(false);
   return 0;
 }
 
@@ -180,13 +140,13 @@ export async function cmdShow() {
   const { config, usingExample } = await loadConfig();
   if (usingExample) logger.warn('usando config de exemplo — crie config/servboard.json');
 
-  logger.info('refresh inicial...');
-  await runRefresh(config, { logger: logger.child('refresh') });
-
-  const { app, url } = await startServer(config, { logger });
+  const { app, url, refresher } = await startServer(config, { logger });
   logger.info(`servidor em ${url}`);
 
-  if (config.display.powerManagement) await setScreenPower(true);
+  logger.info('refresh inicial...');
+  await refresher.firstRun;
+
+  if (config.display.keepScreenOn) await setScreenPower(true);
 
   let kiosk;
   try {
@@ -195,6 +155,7 @@ export async function cmdShow() {
     logger.error(err.message);
     logger.warn(`servidor continua no ar em ${url} — abra manualmente. Ctrl-C para parar.`);
     await waitForSignal();
+    refresher?.stop();
     await app.close();
     return 1;
   }
@@ -204,8 +165,8 @@ export async function cmdShow() {
 
   logger.info('encerrando...');
   kiosk.stop();
+  refresher?.stop();
   await app.close();
-  if (config.display.powerManagement) await setScreenPower(false);
   return 0;
 }
 

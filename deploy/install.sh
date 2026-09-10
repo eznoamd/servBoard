@@ -29,12 +29,12 @@ node bin/servboard.js doctor || {
   exit 1
 }
 
-echo "==> Instalando units do systemd --user"
+echo "==> Instalando serviços do systemd --user (dashboard sempre ativa)"
 node bin/servboard.js install
 
 echo
 echo "Pronto. Comandos úteis:"
-echo "  systemctl --user list-timers | grep servboard"
-echo "  systemctl --user start servboard-web.service     # testar agora"
-echo "  systemctl --user stop  servboard-web.service"
+echo "  systemctl --user status servboard-web.service servboard-kiosk.service"
+echo "  systemctl --user restart servboard-web.service   # recarregar após mudar config"
+echo "  systemctl --user stop    servboard-web.service"
 echo "  journalctl --user -u servboard-web.service -f    # logs"

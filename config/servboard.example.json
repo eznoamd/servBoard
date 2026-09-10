@@ -12,17 +12,14 @@
   },
 
   "display": {
-    "start": "07:00",
-    "stop": "23:00",
-    "days": "Mon..Sun",
     "browser": "auto",
-    "powerManagement": true,
+    "keepScreenOn": true,
     "xDisplay": ":0"
   },
 
   "refresh": {
-    "onCalendar": "*:0/15",
-    "runBeforeDisplay": true
+    "everyMinutes": 15,
+    "onStart": true
   },
 
   "slotPaths": [],

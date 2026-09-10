@@ -96,3 +96,70 @@ export async function runRefresh(config, { only, logger = createLogger('refresh'
 
   return { results };
 }
+
+/**
+ * Converte "30s" | "5m" | "2h" | 15 (número = minutos) em milissegundos.
+ * Valor ausente/inválido cai para `fallbackMs`.
+ */
+export function parseInterval(value, fallbackMs) {
+  if (value == null || value === '') return fallbackMs;
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value > 0 ? value * 60_000 : fallbackMs;
+  }
+  const m = /^(\d+(?:\.\d+)?)\s*(s|m|h)?$/.exec(String(value).trim());
+  if (!m) return fallbackMs;
+  const mult = m[2] === 's' ? 1000 : m[2] === 'h' ? 3_600_000 : 60_000;
+  return Math.max(1000, Math.round(Number(m[1]) * mult));
+}
+
+const LOOP_RESOLUTION_MS = 15_000;
+
+/**
+ * Loop de atualização para o servidor sempre-ativo. Cada slot é atualizado no
+ * seu próprio `refreshInterval` (slot.json), caindo para
+ * `config.refresh.everyMinutes` quando o slot não define um.
+ *
+ * @returns {{ firstRun: Promise<void>, stop: () => void }}
+ */
+export function startRefreshLoop(config, { logger = createLogger('refresh') } = {}) {
+  const globalMs = Math.max(1, Number(config.refresh?.everyMinutes) || 15) * 60_000;
+  const nextDue = new Map(); // id -> timestamp em que o slot volta a ser devido
+  let running = false;
+  let stopped = false;
+
+  async function tick() {
+    if (running || stopped) return;
+    running = true;
+    try {
+      const slots = await enabledSlots(config);
+      const now = Date.now();
+      const live = new Set();
+      const due = [];
+      for (const slot of slots) {
+        live.add(slot.id);
+        const everyMs = parseInterval(slot.refreshInterval, globalMs);
+        if (now >= (nextDue.get(slot.id) ?? 0)) {
+          due.push(slot.id);
+          nextDue.set(slot.id, now + everyMs);
+        }
+      }
+      for (const id of [...nextDue.keys()]) if (!live.has(id)) nextDue.delete(id);
+      if (due.length) await runRefresh(config, { only: due, logger });
+    } catch (err) {
+      logger.error(`loop de refresh: ${err.message}`);
+    } finally {
+      running = false;
+    }
+  }
+
+  const firstRun = config.refresh?.onStart === false ? Promise.resolve() : tick();
+  const timer = setInterval(tick, LOOP_RESOLUTION_MS);
+
+  return {
+    firstRun,
+    stop() {
+      stopped = true;
+      clearInterval(timer);
+    },
+  };
+}
