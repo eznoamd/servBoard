@@ -100,9 +100,12 @@ export async function setScreenPower(on) {
   if (!process.env.DISPLAY) return { ok: false, reason: 'sem $DISPLAY' };
   try {
     if (on) {
-      await execFileAsync('xset', ['-dpms']);
-      await execFileAsync('xset', ['s', 'off']);
+      // acorda a tela primeiro; o "dpms force on" reativa o DPMS internamente,
+      // então "xset -dpms" e "s off" precisam vir DEPOIS pra valerem.
       await execFileAsync('xset', ['dpms', 'force', 'on']);
+      await execFileAsync('xset', ['s', 'off']);
+      await execFileAsync('xset', ['s', 'noblank']);
+      await execFileAsync('xset', ['-dpms']);
     } else {
       await execFileAsync('xset', ['dpms', 'force', 'off']);
     }
