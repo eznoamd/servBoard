@@ -1,6 +1,7 @@
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { paths } from './paths.js';
 import { createLogger } from './logger.js';
 
@@ -40,6 +41,28 @@ export async function findBrowser(preferred = 'auto') {
 }
 
 /**
+ * Escreve translate.enabled=false direto no Preferences do perfil "Default".
+ * As flags --disable-translate/--disable-features=TranslateUI nem sempre
+ * bastam nas versões recentes do Chromium; o pref é o que a bubble checa de fato.
+ */
+async function disableTranslatePrompt(profileDir) {
+  const defaultDir = join(profileDir, 'Default');
+  const prefsPath = join(defaultDir, 'Preferences');
+  await mkdir(defaultDir, { recursive: true });
+
+  let prefs = {};
+  try {
+    prefs = JSON.parse(await readFile(prefsPath, 'utf8'));
+  } catch {
+    /* perfil novo ou arquivo corrompido: recomeça do zero */
+  }
+
+  prefs.translate = { ...(prefs.translate ?? {}), enabled: false };
+
+  await writeFile(prefsPath, JSON.stringify(prefs));
+}
+
+/**
  * Sobe o navegador em modo kiosk apontando para `url`.
  * Retorna um handle com { process, stop() }.
  */
@@ -59,6 +82,7 @@ export async function launchKiosk(url, config, { logger = createLogger('kiosk') 
   }
 
   await mkdir(paths.chromiumProfile, { recursive: true });
+  await disableTranslatePrompt(paths.chromiumProfile);
 
   const args = [
     `--user-data-dir=${paths.chromiumProfile}`,
@@ -69,7 +93,7 @@ export async function launchKiosk(url, config, { logger = createLogger('kiosk') 
     '--disable-translate',
     '--disable-infobars',
     '--disable-session-crashed-bubble',
-    '--disable-features=TranslateUI',
+    '--disable-features=Translate,TranslateUI',
     '--check-for-update-interval=31536000',
     '--overscroll-history-navigation=0',
     '--noerrdialogs',
